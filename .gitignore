@@ -9,12 +9,11 @@ venv/
 
 # Uploads
 backend/data/uploads/*
-!backend/data/uploads/.gitkeep
 
 # Flask debug logs (dev artifacts, not source)
 backend/.flask-*.log
 
-# Inspection scripts — review before use, not committed source.
+# Inspection scripts - review before use, not committed source.
 scripts/
 
 # Models cache
@@ -24,10 +23,6 @@ scripts/
 # Node
 node_modules/
 frontend/dist/
-
-# OS
-.DS_Store
-Thumbs.db
 
 # IDE
 .vscode/
