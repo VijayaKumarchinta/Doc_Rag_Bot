@@ -1,5 +1,3 @@
-# backend/app/rag/prompt.py
-
 from ..config import Config
 
 SYSTEM_PROMPT = (
