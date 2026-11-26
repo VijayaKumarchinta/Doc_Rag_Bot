@@ -1,1 +1,12 @@
 # evaluation/test_questions.csv
+# Category, Question, Expected Answer, Source Document
+PDF factual,What is the total amount mentioned in the PDF report?,Report total amount,N/A
+PDF factual,Who is the primary contact person listed in the document?,Contact name from PDF,N/A
+PDF table,What are the column headers in the PDF table?,Table column names,N/A
+Excel lookup,What is the value in row 5 of the Sales sheet?,Cell value from Excel,N/A
+Excel aggregation,What is the average sales amount across all rows?,Average from Excel,N/A
+CSV question,What city is associated with customer ID 101?,City from CSV,N/A
+Cross-document,Compare the total in the PDF with the sum in the Excel file.,Cross-doc comparison,N/A
+Unanswerable,What is the weather forecast for tomorrow?,Information not in documents,N/A
+Unanswerable,Who is the current president of the United States?,Information not in documents,N/A
+Unanswerable,What is the meaning of life?,Philosophical question not in documents,N/A
