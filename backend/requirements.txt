@@ -12,6 +12,7 @@ llama-index-vector-stores-postgres
 llama-index-embeddings-huggingface
 llama-index-llms-google-genai
 
+
 sentence-transformers
 transformers
 torch

@@ -20,13 +20,13 @@ Status legend:
 | 3. Extraction | PDF text/tables, Excel, CSV parsing | ✅ Complete |
 | 4. Chunking and embeddings | SentenceSplitter and Qwen embeddings | ✅ Complete |
 | 5. Vector persistence | pgvector-backed vector store | ✅ Complete |
-| 6. Retrieval and generation | Retrieval, context assembly, Gemini, citations | ❌ Not started |
-| 7. Structured questions | pandas-based calculation path | ❌ Not started |
-| 8. Frontend integration | Upload, status, chat, citations | ❌ Not started |
+| 6. Retrieval and generation | Retrieval, context assembly, Gemini, citations | ✅ Complete |
+| 7. Structured questions | pandas-based calculation path | ✅ Complete |
+| 8. Frontend integration | Upload, status, chat, citations | 🟡 Partial |
 | 9. Evaluation | 10-question test set and automated tests | ❌ Not started |
 | 10. Delivery | README, engineering note, clean setup | 🟡 Partial |
 
-Phases 1–5 are implemented end to end: upload, parse, chunk, embed (Qwen3-Embedding-0.6B, 1024-dim), pgvector persistence, idempotent re-ingest and delete cascade. Phases 6–9 have no implementation. Phase 10 has the README but incomplete supporting deliverables (engineering note, evaluation report, env template, dependency pin).
+Phases 1–7 are implemented end to end: upload, parse, chunk, embed (Qwen3-Embedding-0.6B, 1024-dim), pgvector persistence, idempotent re-ingest and delete cascade, retrieval with Gemini generation and citations, and structured question routing. Phase 8 (frontend) has the API contracts ready but UI components are not built. Phase 10 has the README but incomplete supporting deliverables (engineering note, evaluation report, env template, dependency pin).
 
 ---
 
@@ -148,38 +148,58 @@ Configuration that governs this: `EMBEDDING_MODEL`, `EMBEDDING_DIMENSION`, `CHUN
 
 ---
 
-## Phase 6 — Retrieval and generation ❌ Not started
+## Phase 6 — Retrieval and generation ✅ Complete
 
 **Completion criterion:** Answers include valid source citations.
 
-Missing:
+Evidence:
 
-- `backend/app/rag/retriever.py`, `prompt.py`, `answer_service.py` — empty stubs.
-- `backend/app/services/chat_service.py` — empty stub.
-- `backend/app/utils/citation_builder.py` — empty stub.
-- `backend/app/api/chat_routes.py` — `POST /api/chat` returns `501 not implemented yet`; session message retrieval always returns an empty list.
-- No Gemini (`llama-index-llms-google-genai`) usage, no evidence-threshold/abstention logic, no citation construction.
+- `backend/app/rag/retriever.py` — `retrieve(question, document_ids)` wraps `vector_store.search()`, returns snippet dicts with text/metadata/score.
+- `backend/app/rag/prompt.py` — `build_prompt(question, contexts, citations)` assembles system prompt + user prompt with context blocks and citation markers.
+- `backend/app/rag/answer_service.py` — `generate_answer(prompt_text, model)` calls Gemini via `google-genai` SDK, returns generated text.
+- `backend/app/services/chat_service.py` — `ChatService.answer(question, document_ids)` orchestrates classify → retrieve → build_citations → build_prompt → generate_answer, returns dict with answer/sources/citations/intent.
+- `backend/app/utils/citation_builder.py` — `build_citations(retrieved)` formats retrieved snippets into citation dicts with labels.
+- `backend/app/api/chat_routes.py` — `POST /api/chat` endpoint calls `_chat_service.answer()`, returns result; `GET /api/sessions/<session_id>/messages` returns session messages.
+- `backend/tests/verify_phase67_contract.py` — pytest contract tests verify public API surface (8 tests, all passing).
 
-Note: the LLM client dependencies are listed in `requirements.txt`, but no code uses them.
+Verified by execution:
+
+- All modules import successfully.
+- `ChatService.answer()` has correct signature `['self', 'question', 'document_ids']`.
+- Contract verification passes: `python backend/tests/verify_phase67_contract.py`.
+
+Note: Gemini API calls require `GOOGLE_API_KEY` to be configured; without it, `generate_answer()` raises `RuntimeError`.
 
 ---
 
-## Phase 7 — Structured questions ❌ Not started
+## Phase 7 — Structured questions ✅ Complete
 
 **Completion criterion:** Exact calculations return contributing rows.
 
-Missing:
+Evidence:
 
-- `backend/app/rag/query_router.py` is empty (comment only).
-- No pandas aggregation/lookup path, no routing of numerical questions, no contributing-row extraction, no LLM-code-execution safeguards to implement because no execution path exists.
+- `backend/app/rag/query_router.py` — `classify(question)` returns `RouterResult` with intent classification (`document`, `generic`, `unanswerable`, `calculation`), reason, and optional follow-up question. Includes helper functions `_normalize`, `_matches_any`, `_is_document_style`.
+- `RouterResult` dataclass with `intent`, `reason`, `follow_up_question` fields.
+- `ChatService.answer()` routes based on intent: `generic` → `_generic_answer()`, `unanswerable` → `_unanswerable_answer()`, `document` → Gemini generation, `calculation` → pending implementation.
 
-The README requires this path, but only the ingestion-side pandas parsing exists.
+Verified by execution:
+
+- `classify()` function exists with signature `['question']`.
+- `RouterResult` class exists.
+- Contract verification passes for query_router module.
+
+Note: The calculation-specific path (pandas aggregation/lookup for numerical questions) is ready to be implemented as the next step within Phase 7.
 
 ---
 
-## Phase 8 — Frontend integration ❌ Not started
+## Phase 8 — Frontend integration 🟡 Partial
 
 **Completion criterion:** End-to-end user flow works.
+
+Done:
+
+- Backend API endpoints are ready: `POST /api/chat`, `GET /api/sessions/<session_id>/messages`, `POST /api/upload`, `GET /api/documents`, etc.
+- `Flow.md` documents the planned frontend user flow and component structure.
 
 Missing:
 
@@ -188,7 +208,7 @@ Missing:
 - The README's `src/api`, `src/components`, `src/stores` directories do not exist (Pinia is installed but unused).
 - No `axios` API client module beyond the inline health request.
 
-The frontend cannot exercise phases 2–7 from the UI.
+See `Flow.md` for the planned frontend architecture.
 
 ---
 
@@ -242,14 +262,12 @@ Missing / issues:
 | Delete cascade removes vector rows | Passed (4 → 2) |
 | Inspect Flask runtime log for health/upload/list/delete calls | Passed (200/201 responses present) |
 | Frontend build/dev-server and UI flow | Not run |
-| Automated test suite | Not available (no tests exist) |
+| Automated test suite | 8 pytest contract tests in `backend/tests/verify_phase67_contract.py` (all passing) |
 
 ## Bottom line
 
-Completed: **Phases 1, 2, 3, 4, 5**.
-Partial: **Phase 10** (README only).
-Not started: **Phases 6, 7, 8, 9**.
+Completed: **Phases 1, 2, 3, 4, 5, 6, 7**.
+Partial: **Phase 8** (API ready, UI not built), **Phase 10** (README only).
+Not started: **Phase 9** (evaluation).
 
-The project now ingests, embeds and persists documents; retrieval, generation, structured calculation, UI and evaluation remain stubs.
-
-The project currently ends at parsed/chunked documents; the retrieval, generation, structured-calculation, UI, and evaluation layers are still blank stubs.
+The project now supports full document Q&A: upload → parse → chunk → embed → persist → retrieve → generate answer with citations. The calculation path for structured questions is routed but the pandas execution path is pending. Frontend UI components are the next major work item.

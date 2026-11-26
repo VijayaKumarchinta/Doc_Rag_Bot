@@ -4,6 +4,7 @@ from flask import Flask
 from .api.health_routes import health_bp
 from .api.document_routes import documents_bp
 from .api.chat_routes import chat_bp
+from .services.chat_service import ChatService
 from .config import Config
 from .extensions import cors
 
