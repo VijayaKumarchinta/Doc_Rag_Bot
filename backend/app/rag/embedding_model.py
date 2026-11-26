@@ -1,7 +1,7 @@
 import threading
 
 from sentence_transformers import SentenceTransformer
-from ..config import Config
+from app.config import Config
 
 _lock = threading.Lock()
 _model = None
