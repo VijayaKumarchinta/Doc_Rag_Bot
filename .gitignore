@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Env / secrets
+.env
+
+# Uploads
+backend/data/uploads/*
+!backend/data/uploads/.gitkeep
+
+# Flask debug logs (dev artifacts, not source)
+backend/.flask-*.log
+
+# Inspection scripts — review before use, not committed source.
+scripts/
+
+# Models cache
+.cache/
+*.safetensors
+
+# Node
+node_modules/
+frontend/dist/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
