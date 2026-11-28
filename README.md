@@ -338,8 +338,9 @@ sentence-transformers
 transformers
 torch
 
-psycopg[binary]>=3.2
+psycopg2-binary>=2.9
 pgvector
+
 
 pytest
 ```
@@ -354,7 +355,7 @@ Create `backend/.env` from `backend/.env.example`.
 FLASK_ENV=development
 SECRET_KEY=replace_with_a_secure_random_value
 
-DATABASE_URL=postgresql://username:password@localhost:5432/document_rag_db
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/document_rag_db
 
 GOOGLE_API_KEY=your_gemini_api_key
 GEMINI_MODEL=gemini-3.8-flash

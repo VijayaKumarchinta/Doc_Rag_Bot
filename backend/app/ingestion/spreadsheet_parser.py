@@ -1,7 +1,16 @@
+import csv
+
 import pandas as pd
+
 from .normalizer import text_segment, rows_to_tsv
 
 WINDOW = 50
+
+# Real-world exports are rarely plain UTF-8 comma-separated: Excel on Windows
+# writes cp1252 and often uses ';' as the separator. Try the common encodings in
+# order and let pandas sniff the delimiter.
+CSV_ENCODINGS = ("utf-8-sig", "utf-8", "cp1252", "latin-1")
+
 
 def _emit_frame(df, *, document_id, source_file, file_type, sheet_name=None):
     segments = []
@@ -29,9 +38,25 @@ def _emit_frame(df, *, document_id, source_file, file_type, sheet_name=None):
         ))
     return segments
 
+
+def _read_csv(path):
+    with open(path, "r", encoding="utf-8", errors="replace") as handle:
+        if not handle.read().strip():
+            raise ValueError("The CSV file has no data")
+
+    last_error = None
+    for encoding in CSV_ENCODINGS:
+        try:
+            return pd.read_csv(path, encoding=encoding, sep=None, engine="python")
+        except (UnicodeDecodeError, pd.errors.ParserError, csv.Error) as error:
+            last_error = error
+    raise ValueError(f"Could not read the CSV file: {last_error}")
+
+
 def parse_csv(path, *, document_id, source_file):
-    df = pd.read_csv(path)
+    df = _read_csv(path)
     return _emit_frame(df, document_id=document_id, source_file=source_file, file_type='csv')
+
 
 def parse_excel(path, *, document_id, source_file):
     sheets = pd.read_excel(path, sheet_name=None, engine='openpyxl')

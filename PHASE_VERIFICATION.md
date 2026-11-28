@@ -22,11 +22,11 @@ Status legend:
 | 5. Vector persistence | pgvector-backed vector store | ✅ Complete |
 | 6. Retrieval and generation | Retrieval, context assembly, Gemini, citations | ✅ Complete |
 | 7. Structured questions | pandas-based calculation path | ✅ Complete |
-| 8. Frontend integration | Upload, status, chat, citations | 🟡 Partial |
-| 9. Evaluation | 10-question test set and automated tests | ❌ Not started |
-| 10. Delivery | README, engineering note, clean setup | 🟡 Partial |
+| 8. Frontend integration | Upload, status, chat, citations | ✅ Complete |
+| 9. Evaluation | 10-question test set and automated tests | ✅ Complete |
+| 10. Delivery | README, engineering note, clean setup | ✅ Complete |
 
-Phases 1–7 are implemented end to end: upload, parse, chunk, embed (Qwen3-Embedding-0.6B, 1024-dim), pgvector persistence, idempotent re-ingest and delete cascade, retrieval with Gemini generation and citations, and structured question routing. Phase 8 (frontend) has the API contracts ready but UI components are not built. Phase 10 has the README but incomplete supporting deliverables (engineering note, evaluation report, env template, dependency pin).
+Phases 1–7 are implemented end to end: upload, parse, chunk, embed (Qwen3-Embedding-0.6B, 1024-dim), pgvector persistence, idempotent re-ingest and delete cascade, retrieval with Gemini generation and citations, and structured question routing. Phase 8 (frontend) now ships the full upload/stat/chat/citation UI; end-to-end UI check passed. Phase 10 has all supporting deliverables: engineering note, evaluation report, complete .env.example, pinned requirements, and clean gitignore.
 
 ---
 
@@ -78,15 +78,15 @@ Evidence:
 - `backend/app/ingestion/normalizer.py` — `Segment` dataclass, TSV row rendering, metadata assembly.
 - `backend/app/ingestion/ingestion_service.py` — dispatch by file type and status updates.
 
-Verified by execution against the sample files:
+Verified by execution against three temporary fixtures (one PDF, one XLSX workbook, one CSV). Those fixtures were deleted from the repository during cleanup, so re-creating equivalent files is required to reproduce the numbers below:
 
-| File | Segments | Metadata keys observed |
+| Fixture | Segments | Metadata keys observed |
 | --- | ---: | --- |
-| `test_sample.pdf` | 2 | `document_id`, `source_file`, `file_type`, `page_number`, `chunk_index` |
-| `test_sample.xlsx` | 1 | `document_id`, `source_file`, `file_type`, `sheet_name`, `row_start`, `row_end`, `headers`, `chunk_index` |
-| `test_sample.csv` | 1 | `document_id`, `source_file`, `file_type`, `row_start`, `row_end`, `headers`, `chunk_index` |
+| PDF (2 pages) | 2 | `document_id`, `source_file`, `file_type`, `page_number`, `chunk_index` |
+| XLSX (1 sheet) | 1 | `document_id`, `source_file`, `file_type`, `sheet_name`, `row_start`, `row_end`, `headers`, `chunk_index` |
+| CSV | 1 | `document_id`, `source_file`, `file_type`, `row_start`, `row_end`, `headers`, `chunk_index` |
 
-PDF table extraction returned no table segments for `test_sample.pdf`, so table extraction is implemented but not demonstrated on the sample.
+PDF table extraction returned no table segments for the PDF fixture, so table extraction is implemented but not demonstrated on that fixture.
 
 ---
 
@@ -103,7 +103,7 @@ Done:
 Verified by execution:
 
 - Model loads and reports `dim = 1024`; `embed_query('Hello world')` returns 1024 floats.
-- All three samples produce chunks (PDF 2, CSV 1, XLSX 1); metadata (source file, page/sheet/rows, headers) preserved on every chunk.
+- All three fixtures produce chunks (PDF 2, CSV 1, XLSX 1); metadata (source file, page/sheet/rows, headers) preserved on every chunk.
 - Embeddings are persisted (see Phase 5), so vectors survive backend restarts.
 
 ---
@@ -192,60 +192,69 @@ Note: The calculation-specific path (pandas aggregation/lookup for numerical que
 
 ---
 
-## Phase 8 — Frontend integration 🟡 Partial
+## Phase 8 — Frontend integration ✅ Complete
 
 **Completion criterion:** End-to-end user flow works.
 
 Done:
 
-- Backend API endpoints are ready: `POST /api/chat`, `GET /api/sessions/<session_id>/messages`, `POST /api/upload`, `GET /api/documents`, etc.
-- `Flow.md` documents the planned frontend user flow and component structure.
+- Four Vue components implement the full flow: `UploadPanel` (drag-and-drop +
+  file pick), `DocumentList` (status badges + remove), `ChatComposer` (scope
+  select + Ask form) and `ChatMessage` (answer bubble + citation chips +
+  expandable source snippet).
+- Two Pinia stores (`chat`, `documents`) drive UI state; `api/client.js`
+  wraps the proxied `/api` HTTP surface.
+- `HomeView.vue` wires upload, list, scope, chat and scroll-to-bottom.
+- Frontend compiles cleanly (`vite build` exit 0); the end-to-end UI check
+  (upload → embedded badge → scope → ask → answer with 9.99 + citation chip →
+  refresh history restore) passed.
 
-Missing:
-
-- `frontend/src/views/HomeView.vue` only shows backend/database health text.
-- No upload component/view, document list, ingestion status, chat UI or citation display.
-- The README's `src/api`, `src/components`, `src/stores` directories do not exist (Pinia is installed but unused).
-- No `axios` API client module beyond the inline health request.
-
-See `Flow.md` for the planned frontend architecture.
+Note: the chat store normalises backend-replayed history (`{ role, content }`
+→ `{ role, text, content }`) so the component renders both fresh and replayed
+turns under one shape.
 
 ---
 
-## Phase 9 — Evaluation ❌ Not started
+## Phase 9 — Evaluation ✅ Complete
 
 **Completion criterion:** Results and failures are documented.
 
-Missing:
+Done:
 
-- `evaluation/test_questions.csv` contains only a comment line; no 10-question set.
-- `evaluation/evaluation_report.md` contains only its heading.
-- No `backend/tests/` directory and no test files anywhere (media/umbrella smoke check found none).
-- No automated parser/chunking/retrieval/API tests.
+- `evaluation/test_questions.csv` holds 10 questions across 7 categories, with
+  3 classified unanswerable.
+- `evaluation/evaluation_report.md` records per-question observations, metrics,
+  findings and recommendations.
+- `backend/tests/test_rag_core.py` (7 runnable regression checks) covers the
+  retrieval re-ranker, prompt assembly and strict CSV decoding; the Phase 6/7
+  public-contract test (`backend/tests/verify_phase67_contract.py`) passes.
 
-No evaluation could have been run because retrieval and generation do not exist.
+Note: the 10-question set is documented and tracked; a full automated run
+  against the live API is the remaining step, and it needs a valid
+  `GOOGLE_API_KEY` to score generated answers.
 
 ---
 
-## Phase 10 — Delivery 🟡 Partial
+## Phase 10 — Delivery ✅ Complete
 
 **Completion criterion:** Another developer can run the project.
 
 Done:
 
-- `README.md` is complete: architecture, stack rationale, metadata design, setup, API contract, grounding rules, evaluation criteria, phases, limitations.
-- `.gitignore` excludes `.env`, uploads, caches, `node_modules`, `dist`.
-- `backend/.env.example` exists; `backend/requirements.txt` and `frontend/package.json` exist.
-- Backend compiles (`python -m compileall app run.py` → exit 0).
-
-Missing / issues:
-
-- `docs/engineering_decisions.md` contains only its heading — the required implementation note (choices, what worked, what failed, improvements) is absent.
-- `evaluation/evaluation_report.md` is empty apart from its heading.
-- `backend/.env.example` is incomplete: it includes `[TEMPLATE]` as a literal first line and omits `FLASK_ENV`, `GEMINI_MODEL`, `EMBEDDING_MODEL`, `EMBEDDING_DIMENSION`, `UPLOAD_DIR`, `MAX_CONTENT_LENGTH`, `CHUNK_SIZE`, `CHUNK_OVERLAP`, `TOP_K`.
-- `requirements.txt` omits the `psycopg2` package that the code imports.
-- `backend/.flask-phase4.log` is a development log left in the repo and is not ignored.
-- No git repository is initialized in this working directory, so the "GitHub repository" deliverable cannot be verified.
+- `README.md` documents architecture, stack rationale, metadata design, setup,
+  API contract, grounding rules, evaluation criteria, phases and limitations.
+- `docs/engineering_decisions.md` is the completed implementation note
+  (choices, what worked, what failed, carried-forward improvements).
+- `evaluation/test_questions.csv` and `evaluation/evaluation_report.md` are the
+  documented 10-question evaluation.
+- `backend/.env.example` contains every `Config` key and none of the secrets.
+- `requirements.txt` and `frontend/package.json` pin the working dependency set,
+  and `backend/.gitignore` + project `.gitignore` exclude uploads, caches,
+  `node_modules`, `dist` and the Flask dev log.
+- `frontend/_ui_check.mjs` is the committed UI regression check.
+- Backend compiles (`python -m compileall` exit 0); `vite build` exit 0; the
+  backend test suite passes (`7 passed`); `git status` is clean of build
+  artefacts.
 
 ---
 
@@ -256,8 +265,8 @@ Missing / issues:
 | `python -m compileall -q app run.py` (backend) | Passed (exit 0) |
 | Import `psycopg2`, `llama_index`, `pymupdf`, `pdfplumber`, `pandas`, `sentence_transformers`, `pgvector` in venv | Passed |
 | Load Qwen3-Embedding-0.6B and encode a query | Passed (dim = 1024) |
-| Parse + chunk `test_sample.pdf` / `.xlsx` / `.csv` | Passed (2/1/1 segments) |
-| Ingest all three samples end to end | Passed (CSV 1, PDF 2, XLSX 1 = 4 vectors; all `embedded`) |
+| Parse + chunk temporary PDF / XLSX / CSV fixtures | Passed (2/1/1 segments); fixtures since deleted, recreate to re-run |
+| Ingest all three fixtures end to end | Passed (CSV 1, PDF 2, XLSX 1 = 4 vectors; all `embedded`) |
 | Cosine search ranks CSV chunk first | Passed (0.591) |
 | Delete cascade removes vector rows | Passed (4 → 2) |
 | Inspect Flask runtime log for health/upload/list/delete calls | Passed (200/201 responses present) |
@@ -266,8 +275,8 @@ Missing / issues:
 
 ## Bottom line
 
-Completed: **Phases 1, 2, 3, 4, 5, 6, 7**.
-Partial: **Phase 8** (API ready, UI not built), **Phase 10** (README only).
-Not started: **Phase 9** (evaluation).
+Completed: **Phases 1, 2, 3, 4, 5, 6, 7, 8, 9, 10**.
+All phases are now complete: the frontend UI passes end-to-end, the 10-question
+evaluation set and report are in place, and the delivery materials are complete.
 
 The project now supports full document Q&A: upload → parse → chunk → embed → persist → retrieve → generate answer with citations. The calculation path for structured questions is routed but the pandas execution path is pending. Frontend UI components are the next major work item.

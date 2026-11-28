@@ -1,7 +1,4 @@
-import json
-import os
 import time
-import traceback
 import psycopg2
 
 from ..config import Config
@@ -11,7 +8,6 @@ from ..rag.vector_store import upsert_many, delete_by_document
 from .pdf_parser import parse_pdf
 from .pdf_table_parser import parse_pdf_tables
 from .spreadsheet_parser import parse_csv, parse_excel
-from .normalizer import segment_to_dict
 
 def _connect():
     conn = psycopg2.connect(Config.DATABASE_URL)

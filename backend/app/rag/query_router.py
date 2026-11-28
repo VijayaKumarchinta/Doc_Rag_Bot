@@ -1,6 +1,6 @@
 import re
 from dataclasses import dataclass
-from ..config import Config
+
 _DOCUMENT_PREFIXES = (
     "what",
     "who",
@@ -85,7 +85,7 @@ class RouterResult:
     follow_up_question: str | None = None
 
 
-def classify(question: str, *, n_evidence_docs: int = 0) -> RouterResult:
+def classify(question: str) -> RouterResult:
     """Classify a user question into one of three intents.
 
     Returns:

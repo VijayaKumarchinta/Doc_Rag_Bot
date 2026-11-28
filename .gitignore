@@ -31,3 +31,10 @@ Thumbs.db
 # IDE
 .vscode/
 .idea/
+
+# Frontend dev server + UI check scratch
+frontend/_ui_check_data/
+frontend/_ui_check.mjs
+frontend/_ui_debug.mjs
+frontend/_ui_final.png
+frontend/_ui_fail.png
